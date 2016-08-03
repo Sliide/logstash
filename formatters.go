@@ -5,6 +5,9 @@ import (
 	"fmt"
 
 	"github.com/sirupsen/logrus"
+	"os"
+	"runtime"
+	"strings"
 )
 
 type LogstashJsonFormatter struct {
@@ -25,7 +28,23 @@ func (f *LogstashJsonFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 		}
 	}
 
+	var pc uintptr
+	var fileName string
+	var lineNumber int
+	for i := 4; i < 9; i++ {
+		pc, fileName, lineNumber, _ = runtime.Caller(i)
+		// If we need to debug the callstack, add this line
+		//data[fmt.Sprintf("caller_%d", i)] = fmt.Sprintf("%s:%d", fileName, lineNumber)
+		if !strings.Contains(fileName, "sirupsen") {
+			break
+		}
+	}
+	functionName := runtime.FuncForPC(pc).Name()
+
+	data["hostname"] = os.Getenv("HOSTNAME")
 	data["message"] = entry.Message
+	data["logger"] = strings.TrimPrefix(functionName, "github.com/sliide/")
+	data["lineno"] = fmt.Sprintf("%s:%d", fileName, lineNumber)
 	data["level"] = entry.Level.String()
 	data["env"] = f.Env
 	data["service"] = f.Service
