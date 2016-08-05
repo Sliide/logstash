@@ -36,6 +36,8 @@ func (s *LogstashTestSuite) TestFileLogger(c *C) {
 		Message string `json:"message"`
 		Level   string `json:"level"`
 		MyField string `json:"my_field"`
+		LineNo  string `json:"lineno"`
+		Logger  string `json:"logger"`
 	}
 
 	jsonString, err := ioutil.ReadFile(filename)
@@ -54,4 +56,6 @@ func (s *LogstashTestSuite) TestFileLogger(c *C) {
 	c.Assert(logMessage.MyField, Equals, "1")
 	c.Assert(logMessage.Level, Equals, "error")
 	c.Assert(logMessage.Message, Equals, "This is an error message")
+	c.Assert(logMessage.LineNo, Matches, ".*logstash_test.go.*")
+	c.Assert(logMessage.Logger, Matches, ".*TestFileLogger")
 }
