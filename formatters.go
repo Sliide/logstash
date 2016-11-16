@@ -3,6 +3,7 @@ package logstash
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"os"
@@ -31,7 +32,7 @@ func (f *LogstashJsonFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	var pc uintptr
 	var fileName string
 	var lineNumber int
-	for i := 4; i < 9; i++ {
+	for i := 2; i < 9; i++ {
 		pc, fileName, lineNumber, _ = runtime.Caller(i)
 		// If we need to debug the callstack, add this line
 		//data[fmt.Sprintf("caller_%d", i)] = fmt.Sprintf("%s:%d", fileName, lineNumber)
@@ -41,6 +42,9 @@ func (f *LogstashJsonFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	}
 	functionName := runtime.FuncForPC(pc).Name()
 
+	// logstash will trim timestamp to milliseconds,
+	// but this means we won't need to edit the code in the future, when nanosecond support comes out.
+	data["@timestamp"] = time.Now().UnixNano()
 	data["hostname"] = os.Getenv("HOSTNAME")
 	data["message"] = entry.Message
 	data["logger"] = strings.TrimPrefix(functionName, "github.com/sliide/")
