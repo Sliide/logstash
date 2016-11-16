@@ -42,9 +42,7 @@ func (f *LogstashJsonFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	}
 	functionName := runtime.FuncForPC(pc).Name()
 
-	// logstash will trim timestamp to milliseconds,
-	// but this means we won't need to edit the code in the future, when nanosecond support comes out.
-	data["@timestamp"] = time.Now().UnixNano()
+	data["@timestamp"] = time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
 	data["hostname"] = os.Getenv("HOSTNAME")
 	data["message"] = entry.Message
 	data["logger"] = strings.TrimPrefix(functionName, "github.com/sliide/")
