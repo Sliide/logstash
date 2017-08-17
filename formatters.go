@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"os"
 	"runtime"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 type LogstashJsonFormatter struct {
@@ -45,7 +46,7 @@ func (f *LogstashJsonFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	data["@timestamp"] = time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
 	data["hostname"] = os.Getenv("HOSTNAME")
 	data["message"] = entry.Message
-	data["logger"] = strings.TrimPrefix(functionName, "github.com/sliide/")
+	data["logger"] = cleanUpFunctionName(functionName)
 	data["lineno"] = fmt.Sprintf("%s:%d", fileName, lineNumber)
 	data["level"] = entry.Level.String()
 	data["env"] = f.Env
@@ -56,4 +57,18 @@ func (f *LogstashJsonFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 		return nil, fmt.Errorf("Failed to marshal fields to JSON, %v", err)
 	}
 	return append(serialized, '\n'), nil
+}
+
+func cleanUpFunctionName(name string) string {
+	// function names are in the form of
+	//github.com/sliide/hungrypenguin/services/httpd.Authenticate.func1
+	//github.com/sliide/hungrypenguin/services/httpd.VerificationResultEvent
+	//for a while we kept only the hungrypenguin/services/httpd.VerificationResultEvent part
+	//the hungrypenguin/services/ is useless info and was never helpful in over a year
+	//All searches happen on the function name itself
+	//besides, the lineno is there in the log message
+
+	// take just the last part of the / split
+	split := strings.Split(name, "/")
+	return split[len(split)-1]
 }
