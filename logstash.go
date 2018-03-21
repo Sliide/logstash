@@ -4,6 +4,7 @@ import (
 	"os"
 
 	log "github.com/sirupsen/logrus"
+	"io"
 )
 
 var LogLevels = map[string]log.Level{
@@ -15,9 +16,10 @@ var LogLevels = map[string]log.Level{
 	"PANIC":   log.PanicLevel,
 }
 
-func Init(logLevel string, logFile string, env string, service string) bool {
+func Init(logLevel string, logFileName string, env string, service string) bool {
 
-	f, err := os.Create(logFile)
+	logFile, err := os.Create(logFileName)
+
 	if err != nil {
 		panic(err)
 	}
@@ -26,7 +28,10 @@ func Init(logLevel string, logFile string, env string, service string) bool {
 		Env:     env,
 		Service: service,
 	})
-	log.SetOutput(f)
+
 	log.SetLevel(LogLevels[logLevel])
+	mw := io.MultiWriter(os.Stdout, logFile)
+
+	log.SetOutput(mw)
 	return true
 }
