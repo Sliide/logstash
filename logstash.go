@@ -18,7 +18,7 @@ var LogLevels = map[string]log.Level{
 
 func Init(logLevel string, logFileName string, env string, service string) bool {
 
-	logFile, err := os.Create(logFileName)
+	logFile, err := NewFile(logFileName)
 
 	if err != nil {
 		panic(err)
