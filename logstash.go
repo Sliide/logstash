@@ -20,15 +20,18 @@ var (
 	}
 
 	rotationCheckInterval       = 10 * time.Second
-	maxLogFileSize        int64 = 20 << 10 // 20KiB
+	maxLogFileSize        int64 = 2 << 30 // 2GiB
 
 	stopRotation chan struct{}
 )
 
 // Init sets up logging
 // This function should only be called once when the service is started
-func Init(logLevel string, logFileName string, env string, service string) bool {
+func Init(logLevel string, logFileName string, env string, service string, maxSize int64) bool {
 
+	if maxSize != 0 {
+		maxLogFileSize = maxSize
+	}
 	logFile, err := os.Create(logFileName)
 
 	if err != nil {

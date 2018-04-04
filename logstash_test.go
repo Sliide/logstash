@@ -39,6 +39,7 @@ func (s *LogstashTestSuite) TestFileLogger(c *C) {
 		filename,
 		"local",
 		"logstash",
+		0,
 	)
 
 	log.WithFields(log.Fields{"my_field": fmt.Sprintf("%d", 1)}).Error("This is an error message")
@@ -69,13 +70,13 @@ func (s *LogstashTestSuite) TestFileRotation(c *C) {
 	defer os.RemoveAll(logsDir)
 
 	rotationCheckInterval = 100 * time.Millisecond
-	maxLogFileSize = 1000
 
 	Init(
 		"DEBUG",
 		logfile,
 		"local",
 		"logstash",
+		1000,
 	)
 
 	stop := make(chan struct{})
