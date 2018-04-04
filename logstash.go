@@ -20,7 +20,7 @@ var (
 	}
 
 	rotationCheckInterval       = 10 * time.Second
-	maxLogFileSize        int64 = 5 << 30 // 5GiB
+	maxLogFileSize        int64 = 20 << 10 // 20KiB
 
 	stopRotation chan struct{}
 )
