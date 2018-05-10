@@ -50,7 +50,12 @@ func Init(logLevel string, logFileName string, env string, service string, maxSi
 }
 
 func setLogFile(writer io.Writer) {
-	log.SetOutput(io.MultiWriter(os.Stdout, writer))
+	log.SetOutput(writer)
+}
+
+
+func rotationTicker(logFileName string){
+
 }
 
 // rotate checks periodically if the
