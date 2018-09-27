@@ -1,9 +1,10 @@
 package logstash
 
 import (
+	"fmt"
 	"io"
 	"os"
-	"os/exec"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -27,11 +28,12 @@ var (
 
 // Init sets up logging
 // This function should only be called once when the service is started
-func Init(logLevel string, logFileName string, env string, service string, maxSize int64) bool {
+func Init(logLevel string, logFileNameBase string, env string, service string, maxSize int64) bool {
 
 	if maxSize != 0 {
 		maxLogFileSize = maxSize
 	}
+	logFileName := addTimestampToFilename(logFileNameBase)
 	logFile, err := os.Create(logFileName)
 
 	if err != nil {
@@ -45,7 +47,7 @@ func Init(logLevel string, logFileName string, env string, service string, maxSi
 
 	log.SetLevel(LogLevels[logLevel])
 	setLogFile(logFile)
-	go rotate(logFileName)
+	go rotate(logFileName, logFileNameBase)
 	return true
 }
 
@@ -60,7 +62,11 @@ func rotationTicker(logFileName string){
 
 // rotate checks periodically if the
 // when the current logfile
-func rotate(logFileName string) {
+func rotate(logFileName, logFileBaseName string) {
+	defer func() {
+		rotatedFilename := addTimestampToFilename(logFileName)
+		os.Rename(logFileName, rotatedFilename)
+	}()
 	log.Debug("starting rotation for", logFileName)
 
 	if stopRotation != nil {
@@ -78,29 +84,26 @@ func rotate(logFileName string) {
 			return
 		case <-ticker.C:
 			f, err := os.Stat(logFileName)
+			if err != nil {
+				log.Errorf("couldn't get file size for %s : %s", logFileName, err)
+				continue
+			}
 			if f.Size() > maxLogFileSize {
 				log.Debugf("log file too large, rotating the log file")
-				rotatedFilename := logFileName + ".1"
 
-				// if the rotated file already exist, add timestamp to its name and archive it
-				if _, err = os.Stat(rotatedFilename); err == nil {
-
-					err = delayedCompression(rotatedFilename)
-					if err != nil {
-						// if the renaming for compression failed, try again before rotating
-						continue
-					}
+				// create new log file with current timestamp
+				logFileName = addTimestampToFilename(logFileBaseName)
+				NewLogFile, err := os.Create(logFileName)
+				if err != nil {
+					log.Error("cannot create new log file: %s", err)
+					continue
 				}
-
+				// add end timestamp
+				rotatedFilename := addTimestampToFilename(logFileName)
 				err = os.Rename(logFileName, rotatedFilename)
 				if err != nil {
 					log.Error("couldn't rename log file", logFileName, err)
 					continue
-				}
-
-				NewLogFile, err := os.Create(logFileName)
-				if err != nil {
-					panic(err)
 				}
 
 				setLogFile(NewLogFile)
@@ -110,25 +113,10 @@ func rotate(logFileName string) {
 	}
 }
 
-// Rename and compress old logs
-func delayedCompression(rotatedFilename string) error {
-
-	timestampedName := rotatedFilename + time.Now().Format(time.RFC3339)
-
-	log.Debugf("found previous log file %s, renaming to %s", rotatedFilename, timestampedName)
-
-	err := os.Rename(rotatedFilename, timestampedName)
-	if err != nil {
-		log.Error("couldn't rename rotated log file", rotatedFilename, err)
-		return err
-	}
-	cmd := exec.Command("gzip", timestampedName)
-	go func() {
-		log.Debug("Compressing log file", timestampedName)
-		err := cmd.Run()
-		if err != nil {
-			log.Error("gzip on rotated log file failed", timestampedName, err)
-		}
-	}()
-	return nil
+func addTimestampToFilename(baseName string) string {
+	return fmt.Sprintf(
+		"%s-%s.log",
+		strings.TrimSuffix(baseName, ".log"),
+		time.Now().Format(time.RFC3339),
+	)
 }
