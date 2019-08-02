@@ -1,6 +1,7 @@
 package logstash
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -49,12 +50,29 @@ func Init(logLevel string, logFileName string, env string, service string, maxSi
 	return true
 }
 
+// InitWithOutput sets up logging with a given output
+// This function should only be called once when the service is started
+func InitWithOutput(logLevel, env, service string, output io.Writer) error {
+	level, ok := LogLevels[logLevel]
+	if !ok {
+		return fmt.Errorf("Unsupported log level: %s", logLevel)
+	}
+
+	log.SetFormatter(&LogstashJsonFormatter{
+		Env:     env,
+		Service: service,
+	})
+
+	log.SetLevel(level)
+	log.SetOutput(output)
+	return nil
+}
+
 func setLogFile(writer io.Writer) {
 	log.SetOutput(writer)
 }
 
-
-func rotationTicker(logFileName string){
+func rotationTicker(logFileName string) {
 
 }
 
