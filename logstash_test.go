@@ -1,6 +1,7 @@
 package logstash
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -61,6 +62,32 @@ func (s *LogstashTestSuite) TestFileLogger(c *C) {
 	c.Assert(logMessage.Message, Equals, "This is an error message")
 	c.Assert(logMessage.LineNo, Matches, ".*logstash_test.go.*")
 	c.Assert(logMessage.Logger, Matches, ".*TestFileLogger")
+}
+
+func (s *LogstashTestSuite) TestOutputLogger(c *C) {
+
+	b := bytes.NewBuffer(nil)
+
+	InitWithOutput(
+		"INFO",
+		"local",
+		"logstash",
+		b,
+	)
+
+	log.WithFields(log.Fields{"my_field": fmt.Sprintf("%d", 1)}).Error("This is an error message")
+
+	var logMessage LogMessage
+
+	if err := json.Unmarshal(b.Bytes(), &logMessage); err != nil {
+		c.Fail()
+	}
+
+	c.Assert(logMessage.MyField, Equals, "1")
+	c.Assert(logMessage.Level, Equals, "error")
+	c.Assert(logMessage.Message, Equals, "This is an error message")
+	c.Assert(logMessage.LineNo, Matches, ".*logstash_test.go.*")
+	c.Assert(logMessage.Logger, Matches, ".*TestOutputLogger")
 }
 
 func (s *LogstashTestSuite) TestFileRotation(c *C) {
