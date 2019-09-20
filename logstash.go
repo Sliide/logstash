@@ -33,11 +33,8 @@ func Init(logLevel string, logFileName string, env string, service string, maxSi
 	if maxSize != 0 {
 		maxLogFileSize = maxSize
 	}
-	logFile, err := os.Create(logFileName)
 
-	if err != nil {
-		panic(err)
-	}
+	logToStdout := os.Getenv("LOG_TO_STDOUT") == "1"
 
 	log.SetFormatter(&LogstashJsonFormatter{
 		Env:     env,
@@ -45,7 +42,18 @@ func Init(logLevel string, logFileName string, env string, service string, maxSi
 	})
 
 	log.SetLevel(LogLevels[logLevel])
-	setLogFile(logFile)
+
+	if logToStdout {
+		setOutput(os.Stdout)
+		return true
+	}
+
+	logFile, err := os.Create(logFileName)
+	if err != nil {
+		panic(err)
+	}
+
+	setOutput(logFile)
 	go rotate(logFileName)
 	return true
 }
@@ -68,7 +76,7 @@ func InitWithOutput(logLevel, env, service string, output io.Writer) error {
 	return nil
 }
 
-func setLogFile(writer io.Writer) {
+func setOutput(writer io.Writer) {
 	log.SetOutput(writer)
 }
 
@@ -121,7 +129,7 @@ func rotate(logFileName string) {
 					panic(err)
 				}
 
-				setLogFile(NewLogFile)
+				setOutput(NewLogFile)
 			}
 		}
 
